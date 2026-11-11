@@ -17,7 +17,28 @@ FILE_BACKUP_DIRS="example.com example.org"
 # 本地保留天数
 LOCAL_RETAIN_DAYS=30
 
-# 对象存储（七牛 Kodo）备份，不需要可设 QINIU_ENABLED=false
+# ============================================================
+# 对象存储（七牛 Kodo）备份 —— 可选
+# 不启用时保持 QINIU_ENABLED=false，云端上传与回读校验会自动跳过。
+#
+# 启用步骤（qshell 官方文档：https://developer.qiniu.com/kodo/1302/qshell ）：
+#   1) 七牛控制台 → 对象存储 → 新建空间（Bucket），例如 my-backup
+#   2) 按文档下载并安装 qshell（Linux 一般解压后放到 /usr/local/bin/qshell，
+#      并 chmod +x；可用 `qshell version` 验证）
+#   3) 用账号 AccessKey/SecretKey 初始化本地授权：
+#        qshell account <AccessKey> <SecretKey> <账号别名>
+#      验证：qshell bucket        # 能列出空间即配置成功
+#   4) 打开下面的开关并填好路径/空间名：
+#        QINIU_ENABLED=true
+#        QINIU_QSHELL="/usr/local/bin/qshell"
+#        QINIU_BUCKET="my-backup"
+#   5) 首次验证：bash scripts/backup.sh daily
+#      日志（logs/YYYY-MM-DD-backup.log）出现「上传成功并已回读校验」即成功；
+#      如果失败，先用 qshell fput/stat 手动确认 AK/SK 与空间权限。
+#
+# 安全提示：AK/SK 保存在 qshell 自己的账号配置里（默认 ~/.qshell/account.json，
+#   权限 600），不要写进本文件，也不要提交到 Git 仓库。
+# ============================================================
 QINIU_ENABLED=false
 QINIU_QSHELL="/usr/local/bin/qshell"
 QINIU_BUCKET="my-backup"

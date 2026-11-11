@@ -63,9 +63,15 @@ else
     fi
 fi
 
-# ---- 云端回读（七牛） ----
-if [ "${QINIU_VERIFY:-true}" = "true" ] && [ -x "${QINIU_QSHELL:-}" ]; then
-    key="sql/$(date +%Y%m%d)_yu.sql.gz"
+# ---- 云端回读（七牛 Kodo，仅 QINIU_ENABLED=true 时检查）----
+# qshell 安装/授权见 config/backup.conf.example 或官方文档：
+# https://developer.qiniu.com/kodo/1302/qshell
+if [ "${QINIU_ENABLED:-false}" != "true" ]; then
+    finding INFO "backup:cloud-off" "对象存储备份未启用（QINIU_ENABLED=false）" "" ""
+elif [ "${QINIU_VERIFY:-true}" = "true" ] && [ -x "${QINIU_QSHELL:-}" ]; then
+    cloud_db="$(printf '%s' "${DAILY_DBS:-}" | awk '{print $1}')"
+    [ -z "$cloud_db" ] && cloud_db="app_db"
+    key="sql/$(date +%Y%m%d)_${cloud_db}.sql.gz"
     out="$(timeout 40 "$QINIU_QSHELL" stat "${QINIU_BUCKET:-backup}" "$key" 2>&1 || true)"
     if printf '%s' "$out" | grep -q 'Fsize'; then
         finding INFO "backup:cloud" "云端备份可回读" "$key $(printf '%s' "$out" | grep 'Fsize' | head -1)" ""
@@ -74,7 +80,8 @@ if [ "${QINIU_VERIFY:-true}" = "true" ] && [ -x "${QINIU_QSHELL:-}" ]; then
             "检查 qshell fput 结果与七牛额度"
     fi
 elif [ "${QINIU_VERIFY:-true}" = "true" ]; then
-    finding WARN "backup:cloud-tool" "qshell 不可执行，跳过云端校验" "${QINIU_QSHELL:-未配置}" "检查 qshell 路径与权限"
+    finding WARN "backup:cloud-tool" "qshell 不可执行，跳过云端校验" "${QINIU_QSHELL:-未配置}" \
+        "按 https://developer.qiniu.com/kodo/1302/qshell 安装 qshell，或设 QINIU_ENABLED=false 关闭"
 fi
 
 # ---- 文件备份（月度） ----

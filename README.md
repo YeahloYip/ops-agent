@@ -28,8 +28,15 @@ chmod 600 config.env config/backup.conf
 $EDITOR config.env config/backup.conf     # 填 SMTP、站点、路径、阈值
 
 # 3. 依赖
-#   msmtp（/etc/msmtprc 配好账户）、/root/.my.cnf（MySQL 备份与探活）
-#   可选：clamscan/freshclam、rkhunter、fail2ban、acme.sh、qshell、opencode、jq
+#   必需：bash 4+、cron、curl、jq、msmtp（/etc/msmtprc 配好账户）、/root/.my.cnf（MySQL 备份与探活）
+#   可选：
+#     - clamscan/freshclam、rkhunter、fail2ban：安全扫描
+#     - acme.sh：证书续签检查
+#     - qshell：七牛 Kodo 对象存储备份
+#       安装与授权：https://developer.qiniu.com/kodo/1302/qshell
+#       详见 config/backup.conf.example 注释；不启用则保持 QINIU_ENABLED=false
+#     - opencode：AI 判定（https://opencode.ai）
+#     - healthchecks.io：外部心跳（见下文）
 
 # 4. 先干跑，确认输出无误
 bash agent.sh --dry-run
