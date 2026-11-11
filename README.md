@@ -43,6 +43,10 @@ bash agent.sh --dry-run
 
 # 5. 配 cron（示例见 cron.example）
 crontab -e
+
+# 6. 可选：配置外部心跳（cron 掉线会反向告警），见 docs/heartbeat.md
+cp config.env.example 中的 HEARTBEAT_URL → config.env，然后：
+bash scripts/heartbeat-test.sh
 ```
 
 ## 判定流程
@@ -77,7 +81,7 @@ ops-agent/
 │   └── judge.sh              # AI 判定（免费模型，自动切换）
 ├── modules/                  # 13 个检查模块
 ├── scripts/                  # 备份 / 病毒扫描 / rootkit / 基线更新 / 日志轮转
-├── docs/
+├── docs/                     # architecture.md / heartbeat.md
 ├── cron.example              # crontab 示例（已错峰）
 ├── logs/                     # 运行数据（不入库）
 ├── LICENSE
@@ -116,6 +120,7 @@ bash scripts/clamav-scan.sh
 bash scripts/rkhunter-scan.sh
 bash scripts/update-databases.sh [--propupd]
 bash scripts/log-rotate.sh
+bash scripts/heartbeat-test.sh [--fail]   # 手动测试心跳（见 docs/heartbeat.md）
 ```
 
 ## 定时任务
@@ -135,13 +140,34 @@ bash scripts/log-rotate.sh
 
 ## 外部心跳（cron 掉线检测）
 
-所有检查都在同一台机器上，若 cron/系统整体异常导致 agent 根本没跑，本地无法自证。因此支持外部 dead-man 心跳：
+所有检查都在同一台机器上，若 cron/系统整体异常导致 agent 根本没跑，本地无法自证。
+因此支持外部 dead-man 心跳：每次巡检结束向 healthchecks.io 报活，超时未报则由对方反向告警。
 
-1. 在 https://healthchecks.io 建一个 Check：Period **12 小时**、Grace **2 小时**（免费额度足够）；
-2. 把 ping URL 填入 `config.env` 的 `HEARTBEAT_URL`；
-3. 之后 agent.sh 每次跑完会 ping：正常 `GET <url>`；当天有 CRIT 时 `GET <url>/fail`；
-4. 12 小时没收到 ping，healthchecks 会反向发邮件告警（cron 挂了/机器挂了）；
-5. 未配置 `HEARTBEAT_URL` 时自动跳过；ping 结果记录在 `logs/.state/heartbeat.log`。
+**启用步骤**（详细图文说明见 [docs/heartbeat.md](docs/heartbeat.md)）：
+
+1. 注册 <https://healthchecks.io/>（免费），**Create Check**：
+   - Period = **12 hours**（对应 09:00 / 21:00 两次巡检）、Grace = **2 hours**
+   - Channels 勾选 **Email**（否则掉线不会通知你）
+2. 复制 Check 页面的 ping URL（形如 `https://hc-ping.com/<uuid>`）
+3. 填入 `config.env`（私有文件，勿提交）：
+
+   ```bash
+   HEARTBEAT_ENABLED=true
+   HEARTBEAT_URL="https://hc-ping.com/<uuid>"
+   ```
+
+4. 手动验证一次：`bash scripts/heartbeat-test.sh`，回面板确认 **Last Ping / Up**
+5. 运行时的行为：
+
+   | 场景 | 动作 | 面板 |
+   |---|---|---|
+   | 巡检正常（无 CRIT） | `GET <url>` | Up |
+   | 巡检发现 CRIT | `GET <url>/fail` | Down（同时项目自己也会发邮件） |
+   | 超 Period+Grace 无 ping | — | 反向告警：cron 挂了 / 机器挂了 / 脚本崩溃 |
+
+- `--dry-run` / `--report-only` 不 ping，避免调试时掩盖真实故障；ping 结果记录在 `logs/.state/heartbeat.log`
+- 未配置 `HEARTBEAT_URL` 或 `HEARTBEAT_ENABLED=false` 时自动跳过，不影响巡检
+- 免费计划 20 个 Check 足够本项目使用；换用其他支持「GET 即存活」的服务也可，只需改 `HEARTBEAT_URL`
 
 ## 排查
 

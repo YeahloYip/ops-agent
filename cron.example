@@ -1,6 +1,8 @@
 # ops-agent 定时任务示例
 # 用法：按实际路径替换 /opt/ops-agent，然后 crontab -e 粘贴
 # 注意：各任务已错峰，避免数据库备份/文件备份同时抢占 IO
+# 心跳：每轮巡检结束会 ping healthchecks.io，因此 Check 的 Period 建议设 12h、Grace 2h
+#       （配置方法见 docs/heartbeat.md；未配置 HEARTBEAT_URL 时自动跳过）
 
 # ===== 巡检 =====
 # 09:00 完整巡检（CRIT 立即发；WARN 经 AI 判定后才发）
