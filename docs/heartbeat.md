@@ -37,11 +37,13 @@ healthchecks.io 免费计划足够用（20 个 Check、邮件/Webhook 通知）�
 
 > 如果以后只保留 09:00 一次巡检，把 Period 改成 **24 hours**，Grace 保持 2 hours 即可。
 
-3. 保存后进入该 Check 的页面，在 **Integrations / Ping URL** 区域复制形如下面的地址：
+3. 保存后进入该 Check 的页面，在 **Integrations / Ping URL** 区域复制地址，形如：
 
 ```
-https://hc-ping.com/70ff45c7-e762-40e8-9d71-55ceb035a0cf
+https://hc-ping.com/00000000-0000-0000-0000-000000000000
 ```
+
+> 上面的 UUID 只是**占位示例**，请使用面板里你自己的那串；不要照抄本文档的值。
 
 > 这个 UUID 就是你的私有 ping key，**不要提交到 Git**。本项目只把它放在本地的
 > `config.env`（已被 `.gitignore` 忽略）。

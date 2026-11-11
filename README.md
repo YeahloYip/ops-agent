@@ -184,8 +184,16 @@ cat logs/.state/alerted.tsv               # 去重表（key / 上次发送 epoch
 - 真实凭据只存在于本地的 `config.env` / `config/backup.conf` / `/root/.my.cnf`，均不入库（见 `SECURITY.md`）
 - 数据库口令不放在命令行（`ps` 可见），统一走 `/root/.my.cnf`
 - **MySQL 3306 公网关闭**：`scripts/mysql-guard.sh` 用 iptables 守卫链控制，
-  默认只允许本机回环，按需 `open <IP> <分钟>` 临时放行并自动过期；
-  推荐日常用 SSH 隧道（见 [docs/mysql-access.md](docs/mysql-access.md)）
+  默认只允许本机回环，按需 `open <IP> <分钟>` 临时放行并自动过期
+- **推荐日常走 SSH 隧道**（不开任何端口、不配白名单、流量加密），详见
+  [docs/mysql-access.md](docs/mysql-access.md)：
+
+  ```bash
+  # 本地执行：本地 13306 → 服务器 127.0.0.1:3306
+  ssh -N -L 13306:127.0.0.1:3306 user@203.0.113.10
+  # 另开终端，像连本地库一样连
+  mysql -h 127.0.0.1 -P 13306 -u dbuser -p
+  ```
 - 邮件只发不收，建议 SMTP 使用无其他用途的账号与授权码
 
 ## 许可
