@@ -194,6 +194,8 @@ cat logs/.state/alerted.tsv               # 去重表（key / 上次发送 epoch
   # 另开终端，像连本地库一样连
   mysql -h 127.0.0.1 -P 13306 -u dbuser -p
   ```
+- **SSH 加固（推荐）**：`PasswordAuthentication no` + `PermitRootLogin prohibit-password`
+  —— 只允许密钥登录，root 不提供密码方式；VNC/控制台登录不经过 sshd，不受影响
 - 邮件只发不收，建议 SMTP 使用无其他用途的账号与授权码
 
 ## 许可
