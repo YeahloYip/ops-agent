@@ -44,8 +44,8 @@ bash agent.sh --dry-run
 # 5. 配 cron（示例见 cron.example）
 crontab -e
 
-# 6. 可选：配置外部心跳（cron 掉线会反向告警），见 docs/heartbeat.md
-cp config.env.example 中的 HEARTBEAT_URL → config.env，然后：
+# 6. 可选：外部心跳（cron 掉线会反向告警），见 docs/heartbeat.md
+#    把 healthchecks.io 的 ping URL 填到 config.env 的 HEARTBEAT_URL，然后验证：
 bash scripts/heartbeat-test.sh
 ```
 
