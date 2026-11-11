@@ -103,7 +103,8 @@ curl -fsS -m 10 "$HEARTBEAT_URL" && echo "ping ok"
 
 | 现象 | 原因与处理 |
 |---|---|
-| `heartbeat.log` 里 `ping FAIL` | 服务器到 healthchecks.io 网络不通（DNS/防火墙/代理）；先 `curl -v "$HEARTBEAT_URL"` 排查 |
+| `heartbeat.log` 里 `ping FAIL` | 服务器到 healthchecks.io 网络不通（DNS/防火墙/代理）；先 `curl -4 -v "$HEARTBEAT_URL"` 排查 |
+| 偶尔超时、过一会儿又正常 | 很可能是**本机 IPv6 不通**：healthchecks 有 AAAA 记录，curl 会先连 IPv6 后超时。本项目的 ping 已强制 `curl -4` 并带 3 次重试；若你自行调用 curl，请加 `-4` |
 | 面板一直不显示 ping | `HEARTBEAT_URL` 填错（少了 `/fail` 以外的路径也算对，但 uuid 错会 404）；或 `HEARTBEAT_ENABLED=false` |
 | 每天都报 Down | Period 设置过短（比如设成 1 小时）；按本指南设 12h + 2h Grace |
 | 收到 CRIT 邮件后面板也 Down，是否重复告警？ | 是**有意的双保险**：项目自己的邮件含详细信息，healthchecks 作为独立通道兜底 |

@@ -184,10 +184,19 @@ heartbeat_ping() {
         return 0
     fi
     [ "$status" = "fail" ] && url="${url%/}/fail"
-    local err
+    # 说明：部分服务器 IPv6 不可用，而 healthchecks 有 AAAA 记录，
+    #       curl 默认会先试 IPv6 导致超时，因此强制 -4，并做 3 次重试。
+    local err attempt rc=1
     err="$(mktemp)"
-    if curl -fsS -m 10 -o /dev/null "$url" 2>"$err"; then
-        echo "$(date '+%F %T') ping ok (${status})" >> "${STATE_DIR}/heartbeat.log"
+    for attempt in 1 2 3; do
+        if curl -4 -fsS -m 15 -o /dev/null "$url" 2>"$err"; then
+            rc=0
+            break
+        fi
+        [ "$attempt" -lt 3 ] && sleep 2
+    done
+    if [ "$rc" -eq 0 ]; then
+        echo "$(date '+%F %T') ping ok (${status}, attempt=${attempt})" >> "${STATE_DIR}/heartbeat.log"
     else
         echo "$(date '+%F %T') ping FAIL (${status}): $(tail -1 "$err")" >> "${STATE_DIR}/heartbeat.log"
         echo "心跳 ping 失败（见 logs/.state/heartbeat.log）"
