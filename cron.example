@@ -20,6 +20,12 @@
 # 每日 01:02 ClamAV 扫描
 2 1 * * * /opt/ops-agent/scripts/clamav-scan.sh >> /opt/ops-agent/logs/cron.log 2>&1
 
+# ===== MySQL 3306 访问控制 =====
+# 每 5 分钟清理过期白名单（open <IP> <分钟> 后自动生效）
+*/5 * * * * /opt/ops-agent/scripts/mysql-guard.sh expire >/dev/null 2>&1
+# 开机重建守卫（有 netfilter-persistent 时可省略，双保险）
+@reboot /opt/ops-agent/scripts/mysql-guard.sh apply >/dev/null 2>&1
+
 # ===== 备份（错峰）=====
 5 0 * * *   /opt/ops-agent/scripts/backup.sh daily   >> /opt/ops-agent/logs/cron.log 2>&1
 15 0 * * 1  /opt/ops-agent/scripts/backup.sh weekly  >> /opt/ops-agent/logs/cron.log 2>&1

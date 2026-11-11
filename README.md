@@ -81,7 +81,7 @@ ops-agent/
 │   └── judge.sh              # AI 判定（免费模型，自动切换）
 ├── modules/                  # 13 个检查模块
 ├── scripts/                  # 备份 / 病毒扫描 / rootkit / 基线更新 / 日志轮转
-├── docs/                     # architecture.md / heartbeat.md
+├── docs/                     # architecture.md / heartbeat.md / mysql-access.md
 ├── cron.example              # crontab 示例（已错峰）
 ├── logs/                     # 运行数据（不入库）
 ├── LICENSE
@@ -121,6 +121,7 @@ bash scripts/rkhunter-scan.sh
 bash scripts/update-databases.sh [--propupd]
 bash scripts/log-rotate.sh
 bash scripts/heartbeat-test.sh [--fail]   # 手动测试心跳（见 docs/heartbeat.md）
+bash scripts/mysql-guard.sh status|apply|open|close|list|expire   # 3306 访问控制（见 docs/mysql-access.md）
 ```
 
 ## 定时任务
@@ -182,6 +183,9 @@ cat logs/.state/alerted.tsv               # 去重表（key / 上次发送 epoch
 
 - 真实凭据只存在于本地的 `config.env` / `config/backup.conf` / `/root/.my.cnf`，均不入库（见 `SECURITY.md`）
 - 数据库口令不放在命令行（`ps` 可见），统一走 `/root/.my.cnf`
+- **MySQL 3306 公网关闭**：`scripts/mysql-guard.sh` 用 iptables 守卫链控制，
+  默认只允许本机回环，按需 `open <IP> <分钟>` 临时放行并自动过期；
+  推荐日常用 SSH 隧道（见 [docs/mysql-access.md](docs/mysql-access.md)）
 - 邮件只发不收，建议 SMTP 使用无其他用途的账号与授权码
 
 ## 许可
