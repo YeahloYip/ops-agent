@@ -142,7 +142,9 @@ ensure_allow_file() {
 cmd_apply() {
     ensure_allow_file
     rebuild_all
-    log "已应用守卫：3306 仅允许本机回环 + 白名单（$(grep -c . "$ALLOW_FILE" 2>/dev/null || echo 0) 条）"
+    local n
+    n="$(grep -c . "$ALLOW_FILE" 2>/dev/null || true)"
+    log "已应用守卫：3306 仅允许本机回环 + 白名单（${n:-0} 条）"
 }
 
 cmd_status() {
