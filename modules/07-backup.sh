@@ -51,17 +51,65 @@ else
             "立即重跑备份并保留损坏样本排查"
     fi
 
-    # 大小异常（对比近 7 份中位数）
-    size_now=$(stat -c %s "$newest_sql")
-    median=$(ls -t "${SQL_DIR}"/*.sql.gz 2>/dev/null | head -8 | tail -7 | xargs -r stat -c %s | sort -n | awk '{a[NR]=$1} END{if(NR) print a[int((NR+1)/2)]}')
-    if [ -n "${median:-}" ] && [ "$median" -gt 0 ]; then
-        if [ $(( size_now * 100 / median )) -lt $(( 100 - ${BACKUP_SIZE_DROP_PERCENT:-50} )) ]; then
-            finding WARN "backup:size" "备份体积异常偏小" \
-                "$(basename "$newest_sql") ${size_now} 字节，近 7 份中位数 ${median} 字节" \
-                "确认数据库是否被清空/迁移；检查 mysqldump 是否部分失败"
-        fi
-    fi
 fi
+
+# ---- 体积异常（按库分别比较）----
+# 注意：不能拿不同库的备份互相比较——各库体积差异可达 20 倍（大库 5MB / 小库 300KB），
+# 混在一起取中位数会把小库的备份误判成"体积骤降"。因此按文件名中的 <db> 分组比较。
+check_db_size() {
+    local db="$1"
+    local files newest size_now sample n median
+    files="$(ls -1 "${SQL_DIR}"/*_"${db}".sql.gz 2>/dev/null | sort -r)"
+    [ -z "$files" ] && return 0
+
+    newest="$(printf '%s\n' "$files" | head -1)"
+    size_now="$(stat -c %s "$newest" 2>/dev/null || echo 0)"
+
+    # 同库历史样本：排除最新一份，最多取 7 份；少于 3 份不做判断
+    sample="$(printf '%s\n' "$files" | tail -n +2 | head -7 | xargs -r stat -c %s 2>/dev/null)"
+    n="$(printf '%s\n' "${sample:-}" | grep -c . || true)"
+    [ "${n:-0}" -lt 3 ] && return 0
+
+    median="$(printf '%s\n' "$sample" | sort -n | awk '{a[NR]=$1} END{print a[int((NR+1)/2)]}')"
+    [ -z "${median:-}" ] && return 0
+    [ "$median" -le 0 ] && return 0
+    [ "$size_now" -le 0 ] && return 0
+
+    if [ $(( size_now * 100 / median )) -lt $(( 100 - ${BACKUP_SIZE_DROP_PERCENT:-50} )) ]; then
+        finding WARN "backup:size:${db}" "备份体积异常偏小（${db}）" \
+            "$(basename "$newest") ${size_now} 字节，同库近 ${n} 份中位数 ${median} 字节" \
+            "确认该库是否被清空/迁移；检查 mysqldump 是否部分失败"
+    fi
+}
+
+# ---- 日备份库新鲜度（按库检查，避免"某个库悄悄不备份了"被整体新鲜度掩盖）----
+check_db_freshness() {
+    local db="$1" newest age_h
+    newest="$(ls -1 "${SQL_DIR}"/*_"${db}".sql.gz 2>/dev/null | sort -r | head -1)"
+    if [ -z "$newest" ]; then
+        finding CRIT "backup:missing:${db}" "数据库 ${db} 没有任何备份文件" \
+            "目录 ${SQL_DIR} 中找不到 *_${db}.sql.gz" \
+            "检查 config/backup.conf 的 DAILY_DBS 与 scripts/backup.sh 日志"
+        return 0
+    fi
+    age_h=$(( ( $(now_epoch) - $(stat -c %Y "$newest") ) / 3600 ))
+    if [ "$age_h" -gt "${BACKUP_SQL_MAX_AGE_HOURS:-26}" ]; then
+        finding CRIT "backup:stale:${db}" "数据库 ${db} 的备份已 ${age_h} 小时未更新" \
+            "$(basename "$newest")" \
+            "检查该库的备份任务是否失败（logs/$(today)-backup.log）"
+    fi
+}
+
+# 日备份库：逐个检查体积与新鲜度
+for _db in ${DAILY_DBS:-}; do
+    check_db_size "$_db"
+    check_db_freshness "$_db"
+done
+# 周/月备份库只检查体积（频率不同，不做每日新鲜度判断）；与日备份去重，避免重复条目
+for _db in ${WEEKLY_DBS:-} ${MONTHLY_DBS:-}; do
+    case " ${DAILY_DBS:-} " in *" ${_db} "*) continue ;; esac
+    check_db_size "$_db"
+done
 
 # ---- 云端回读（七牛 Kodo，仅 QINIU_ENABLED=true 时检查）----
 # qshell 安装/授权见 config/backup.conf.example 或官方文档：

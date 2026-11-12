@@ -13,6 +13,8 @@
 set -u
 export LANG="${LANG:-C.UTF-8}"
 export LC_ALL="${LC_ALL:-C.UTF-8}"
+# cron 默认 PATH 不含 /usr/sbin，这里统一补全，避免系统命令找不到造成误报
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 OPS_ROOT="$(cd "$(dirname "$0")" && pwd)"
 if [ ! -f "${OPS_ROOT}/config.env" ]; then

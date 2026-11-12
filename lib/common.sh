@@ -4,6 +4,21 @@
 # 定位仓库根目录（lib/ 的上一级）
 OPS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# 统一 PATH：cron 默认 PATH 只有 /usr/bin:/bin，缺少 /usr/sbin，
+# 会导致 iptables / ss / nginx 等系统命令找不到而产生误报。
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
+# 查找 iptables 可执行文件（PATH 异常时兜底绝对路径）
+iptables_bin() {
+    local b
+    b="$(command -v iptables 2>/dev/null || true)"
+    [ -n "$b" ] && { printf '%s' "$b"; return 0; }
+    for b in /usr/sbin/iptables /sbin/iptables /usr/local/sbin/iptables; do
+        [ -x "$b" ] && { printf '%s' "$b"; return 0; }
+    done
+    return 1
+}
+
 # 加载配置（调用方通常已 source，这里做兜底）
 if [ ! -f "${OPS_ROOT}/config.env" ]; then
     echo "缺少 ${OPS_ROOT}/config.env" >&2
