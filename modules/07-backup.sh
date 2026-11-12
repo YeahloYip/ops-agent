@@ -225,11 +225,14 @@ if [ "${BACKUP_COVERAGE_CHECK:-true}" = "true" ]; then
     for _db in $(live_dbs | sort -u); do
         [ -z "$_db" ] && continue
         case " ${ALL_DBS} " in
-            *" ${_db} "*) ;;
-            *) finding WARN "backup:uncovered-db:${_db}" "数据库 ${_db} 未纳入备份清单" \
-                   "存在于 MySQL，但不在 DAILY_DBS/WEEKLY_DBS/MONTHLY_DBS" \
-                   "确认是否需要备份；需要则加入 config/backup.conf 并重跑 backup.sh" ;;
+            *" ${_db} "*) continue ;;
         esac
+        case " ${BACKUP_IGNORED_DBS:-} " in
+            *" ${_db} "*) finding INFO "backup:ignored-db:${_db}" "数据库 ${_db} 按配置不备份（BACKUP_IGNORED_DBS）" "" "" ; continue ;;
+        esac
+        finding WARN "backup:uncovered-db:${_db}" "数据库 ${_db} 未纳入备份清单" \
+            "存在于 MySQL，但不在 DAILY_DBS/WEEKLY_DBS/MONTHLY_DBS" \
+            "需要备份则加入 config/backup.conf；确认不需要则加入 BACKUP_IGNORED_DBS"
     done
 
     for _dir in "${WEBROOT}"/*/; do
@@ -237,11 +240,14 @@ if [ "${BACKUP_COVERAGE_CHECK:-true}" = "true" ]; then
         _name="$(basename "$_dir")"
         case "$_name" in backup|default) continue ;; esac
         case " ${FILE_BACKUP_DIRS:-} " in
-            *" ${_name} "*) ;;
-            *) finding WARN "backup:uncovered-dir:${_name}" "站点目录 ${_name} 未纳入文件备份" \
-                   "存在于 ${WEBROOT}，但不在 FILE_BACKUP_DIRS" \
-                   "确认是否需要备份；需要则加入 config/backup.conf 的 FILE_BACKUP_DIRS" ;;
+            *" ${_name} "*) continue ;;
         esac
+        case " ${BACKUP_IGNORED_DIRS:-} " in
+            *" ${_name} "*) finding INFO "backup:ignored-dir:${_name}" "站点目录 ${_name} 按配置不备份（BACKUP_IGNORED_DIRS）" "" "" ; continue ;;
+        esac
+        finding WARN "backup:uncovered-dir:${_name}" "站点目录 ${_name} 未纳入文件备份" \
+            "存在于 ${WEBROOT}，但不在 FILE_BACKUP_DIRS" \
+            "需要备份则加入 FILE_BACKUP_DIRS；确认不需要则加入 BACKUP_IGNORED_DIRS"
     done
 fi
 
