@@ -34,11 +34,15 @@ for log_file in "${LOGDIR}"/*.log; do
     finding INFO "access:${base}" "${base} 今日请求 ${today_req}" \
         "403(拦截) ${waf_403} / 401 ${auth_401} / 5xx ${err_5xx}；TOP403: ${top_paths:-无}" ""
 
-    # 5xx 占比异常
+    # 5xx 异常：绝对值达阈值即告警（低流量站点也能发现真实应用错误）
     if [ "${err_5xx:-0}" -ge "${ERROR_5XX_WARN:-10}" ]; then
-        pct=$(( err_5xx * 100 / today_req ))
+        pct="$(awk -v a="$err_5xx" -v b="$today_req" 'BEGIN{printf "%.2f", (b>0)? a*100/b : 0}')"
+        # 展示 5xx 最多的请求路径（比 403 路径更有诊断价值）
+        top5xx=$(grep -F "$DAY_TAG" "$log_file" 2>/dev/null | grep -E '" 5[0-9][0-9] ' | \
+            grep -oE '(GET|POST|HEAD) /[^ ]*' | awk '{print $2}' | sed 's/?.*//' | \
+            sort | uniq -c | sort -rn | head -3 | awk '{printf "%s(%s) ", $2, $1}')
         finding WARN "access5xx:${base}" "${base} 今日 5xx ${err_5xx} 次（占 ${pct}%）" \
-            "TOP403: ${top_paths:-无}" "检查 php-fpm/mysql 与 error_log 对应时间点"
+            "TOP5xx: ${top5xx:-无}" "查该站点 error_log 与 PHP 异常日志中对应时间点的报错"
     fi
 done
 
