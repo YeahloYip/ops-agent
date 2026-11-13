@@ -42,3 +42,17 @@ LOCAL_RETAIN_DAYS=30
 QINIU_ENABLED=false
 QINIU_QSHELL="/usr/local/bin/qshell"
 QINIU_BUCKET="my-backup"
+
+# ============================================================
+# 已下线站点：不纳入日常备份，只保留一份最终归档
+# ------------------------------------------------------------
+# 1) 在 config.env 中声明忽略，避免巡检每天告警：
+#      BACKUP_IGNORED_DBS="old_db1 old_db2"
+#      BACKUP_IGNORED_DIRS="old-site1.com old-site2.com"
+# 2) 对下线对象做一次最终归档（建议放在 ${BACKUP_DIR}/archive/，
+#    该目录不参与日常轮转清理，也不会被巡检当作常规备份）：
+#      mkdir -p /path/to/backup/archive
+#      mysqldump ... old_db1 | gzip > /path/to/backup/archive/$(date +%Y%m%d)_old_db1.sql.gz
+#      tar -zcf /path/to/backup/archive/$(date +%Y%m%d)_old-site1.com.tar.gz -C /var/www old-site1.com
+# 3) 归档文件建议同步一份到对象存储（archive/ 前缀）
+# ============================================================
