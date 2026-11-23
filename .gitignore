@@ -1,0 +1,27 @@
+# ---- 本地配置（含口令/服务器信息，切勿提交）----
+config.env
+config/backup.conf
+!config.env.example
+!config/backup.conf.example
+
+# ---- 私有资料（真实服务器数据，保留在本地）----
+ANALYSIS.md
+
+# ---- 运行数据 ----
+logs/
+logs/.state/
+*.log
+*.log.gz
+*.sql.gz
+*.tar.gz
+
+# ---- 临时/备份 ----
+*.bak
+*.tmp
+*.swp
+backup/
+
+# ---- 系统 ----
+.DS_Store
+._*
+Thumbs.db
